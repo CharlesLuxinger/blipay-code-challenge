@@ -1,0 +1,39 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/credit_scoring
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:?OPENWEATHER_API_KEY is required}
+    networks:
+      - credit-scoring-network
+
+  postgres:
+    image: postgres:18-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: credit_scoring
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d credit_scoring"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - credit-scoring-network
+
+volumes:
+  pgdata:
+
+networks:
+  credit-scoring-network: {}
