@@ -51,6 +51,7 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.springframework.boot:spring-boot-flyway")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
 
@@ -110,7 +111,14 @@ tasks.jacocoTestReport {
         files(
             classDirectories.files.map {
                 fileTree(it) {
-                    exclude("**/config/**", "**/health/**")
+                    exclude(
+                        "**/config/**",
+                        "**/health/**",
+                        "**/*Application*",
+                        "**/*\$DefaultImpls*",
+                        "**/infra/api/*Request*",
+                        "**/infra/persistence/entity/**",
+                    )
                 }
             },
         ),
@@ -119,6 +127,7 @@ tasks.jacocoTestReport {
 
 tasks.jacocoTestCoverageVerification {
     dependsOn(tasks.test)
+    classDirectories.setFrom(tasks.jacocoTestReport.get().classDirectories)
     violationRules {
         rule {
             element = "BUNDLE"

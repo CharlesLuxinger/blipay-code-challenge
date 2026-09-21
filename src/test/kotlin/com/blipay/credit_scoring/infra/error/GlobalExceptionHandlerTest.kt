@@ -8,6 +8,9 @@ import com.blipay.credit_scoring.domain.credit.exception.DuplicateDocumentExcept
 import com.blipay.credit_scoring.domain.credit.exception.UnknownCityException
 import com.blipay.credit_scoring.domain.credit.exception.VersionConflictException
 import com.blipay.credit_scoring.domain.credit.exception.WeatherUnavailableException
+import jakarta.validation.ConstraintViolation
+import jakarta.validation.ConstraintViolationException
+import jakarta.validation.Path
 import java.lang.reflect.Method
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -65,5 +68,49 @@ class GlobalExceptionHandlerTest {
         assertEquals("city was not found", UnknownCityException().message)
         assertEquals("customer was changed by another request", VersionConflictException().message)
         assertEquals("weather provider is unavailable", WeatherUnavailableException().message)
+    }
+
+    @Test
+    fun constraintViolationReturnsProblemDetailWithViolations() {
+        val violation =
+            object : ConstraintViolation<Any> {
+                override fun getMessage() = "must not be blank"
+
+                override fun getMessageTemplate() = ""
+
+                override fun getRootBean(): Any = ""
+
+                override fun getRootBeanClass(): Class<Any> = Any::class.java
+
+                override fun getLeafBean(): Any = ""
+
+                override fun getExecutableParameters(): Array<Any?> = emptyArray()
+
+                override fun getExecutableReturnValue(): Any = ""
+
+                override fun getPropertyPath(): Path = Path { java.util.Collections.emptyIterator() }
+
+                override fun getInvalidValue(): Any = ""
+
+                override fun getConstraintDescriptor() = null!!
+
+                override fun <U : Any?> unwrap(type: Class<U>?): U = null!!
+            }
+        val exception = ConstraintViolationException(setOf(violation))
+        val problem = handler.constraintViolation(exception)
+        assertEquals(400, problem.status)
+        assertEquals("Request validation failed", problem.detail)
+    }
+
+    @Test
+    fun unknownCityReturnsBadRequest() {
+        assertEquals(400, handler.unknownCity().status)
+        assertEquals("city was not found", handler.unknownCity().detail)
+    }
+
+    @Test
+    fun malformedInputReturnsBadRequest() {
+        assertEquals(400, handler.malformedInput().status)
+        assertEquals("Request contains invalid input", handler.malformedInput().detail)
     }
 }

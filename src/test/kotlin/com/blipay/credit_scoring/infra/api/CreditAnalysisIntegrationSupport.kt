@@ -17,8 +17,6 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
 
@@ -32,8 +30,10 @@ class WeatherStub : HttpHandler {
     override fun handle(exchange: HttpExchange) {
         calls++
         val body = if (status == 200) "{\"main\":{\"temp\":$temperature}}" else "{\"message\":\"provider failure\"}"
-        exchange.sendResponseHeaders(status, body.toByteArray(StandardCharsets.UTF_8).size.toLong())
-        exchange.responseBody.use { it.write(body.toByteArray(StandardCharsets.UTF_8)) }
+        val bytes = body.toByteArray(StandardCharsets.UTF_8)
+        exchange.responseHeaders.set("Content-Type", "application/json")
+        exchange.sendResponseHeaders(status, bytes.size.toLong())
+        exchange.responseBody.use { it.write(bytes) }
     }
 
     fun reset() {
@@ -45,7 +45,6 @@ class WeatherStub : HttpHandler {
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class CreditAnalysisIntegrationSupport {
     @LocalServerPort
@@ -75,9 +74,10 @@ abstract class CreditAnalysisIntegrationSupport {
     }
 
     companion object {
-        @Container
         @JvmStatic
-        val postgres = PostgreSQLContainer("postgres:18-alpine")
+        val postgres: PostgreSQLContainer<*> by lazy {
+            PostgreSQLContainer("postgres:18-alpine").also { it.start() }
+        }
 
         @JvmStatic
         val weather = WeatherStub()
@@ -92,9 +92,9 @@ abstract class CreditAnalysisIntegrationSupport {
         @JvmStatic
         @DynamicPropertySource
         fun properties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url", postgres::getJdbcUrl)
-            registry.add("spring.datasource.username", postgres::getUsername)
-            registry.add("spring.datasource.password", postgres::getPassword)
+            registry.add("spring.datasource.url") { postgres.jdbcUrl }
+            registry.add("spring.datasource.username") { postgres.username }
+            registry.add("spring.datasource.password") { postgres.password }
             registry.add("openweather.api.base-url") { "http://localhost:${weatherServer.address.port}" }
             registry.add("openweather.api.key") { "test-key" }
         }
