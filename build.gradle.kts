@@ -65,7 +65,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("io.rest-assured:rest-assured:6.0.1")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:6.1.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     detektCli("dev.detekt:detekt-cli:2.0.0-alpha.6") {
