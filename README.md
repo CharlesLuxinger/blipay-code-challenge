@@ -1,6 +1,6 @@
 # Blipay Credit Scoring
 
-Spring Boot and Kotlin scaffold for the credit-scoring challenge.
+Spring Boot and Kotlin implementation of the credit-scoring challenge.
 
 ## Stack
 
@@ -9,16 +9,15 @@ Spring Boot and Kotlin scaffold for the credit-scoring challenge.
 - Spring Boot 4.1.1
 - PostgreSQL with Flyway
 - Docker and Docker Compose
-- Hexagonal architecture
+- Hexagonal Architecture
 - JUnit 5, Mockito, Rest Assured, Testcontainers, and ArchUnit
 
 ## Decisions
 
 - Credit analyses are persisted in PostgreSQL.
-- Temperature is converted from OpenWeather Kelvin to Celsius.
+- OpenWeather is queried with metric units and returns Celsius.
 - Fractional scores are rounded half up to an integer.
-- The planned API is `POST /credit-analyses` and `GET /credit-analyses/{cpf}`.
-- `OPENWEATHER_API_KEY` is required for the weather adapter.
+- The API supports create, repeat analysis, and history routes.
 
 ## Run locally
 
@@ -26,7 +25,11 @@ Prerequisites: Java 25, Docker, and Docker Compose V2.
 
 ```bash
 cat > .env <<'EOF'
+OPENWEATHER_API_URL=https://api.openweathermap.org/data/2.5
 OPENWEATHER_API_KEY=your-key
+DB_URL=jdbc:postgresql://localhost:5432/credit_scoring
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
 EOF
 ```
 
@@ -47,7 +50,35 @@ The PostgreSQL database is available at `localhost:5432`.
 ./gradlew ktlintMainSourceSetCheck ktlintTestSourceSetCheck
 ./gradlew detekt
 ./gradlew test
+./gradlew test jacocoTestReport jacocoTestCoverageVerification
 ```
+
+## API
+
+`POST /credit-analyses` creates the first analysis:
+
+```bash
+curl -X POST http://localhost:8080/credit-analyses \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Maria","age":30,"monthlyIncome":1800,"city":"Recife","document_number":"123.456.789-09"}'
+```
+
+`PUT /credit-analyses/{document_number}` creates another analysis for the same customer:
+
+```bash
+curl -X PUT http://localhost:8080/credit-analyses/12345678909 \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Maria","age":31,"monthlyIncome":2000,"city":"Olinda"}'
+```
+
+`GET /credit-analyses/{document_number}` lists history with zero-based pagination:
+
+```bash
+curl 'http://localhost:8080/credit-analyses/123.456.789-09?page=0&size=20'
+```
+
+All errors use `application/problem+json`. OpenWeather timeouts, network errors, and server errors
+are retried up to four total attempts before returning `502`.
 
 The feature packages follow this dependency direction:
 
@@ -55,5 +86,6 @@ The feature packages follow this dependency direction:
 infra -> application -> domain
 ```
 
-Controllers and external adapters belong under `infra`. Use cases belong under
-`application`. Business rules and ports belong under `domain`.
+- Controllers and external adapters belong under `infra`.
+- Use cases belong under `application`.
+- Business rules and ports belong under `domain`.
