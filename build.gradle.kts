@@ -93,10 +93,10 @@ detekt {
     config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
     baseline = file("$rootDir/config/detekt/baseline.xml")
     ignoreFailures = false
-    source.setFrom(
-        fileTree("$rootDir/src/main/kotlin"),
-        fileTree("$rootDir/src/test/kotlin"),
-    )
+}
+
+tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
+    source(fileTree("$rootDir/src/main/kotlin"), fileTree("$rootDir/src/test/kotlin"))
 }
 
 tasks.withType<Test> {
