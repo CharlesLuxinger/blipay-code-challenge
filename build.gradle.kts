@@ -5,7 +5,6 @@ plugins {
     id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
-    id("dev.detekt") version "2.0.0-alpha.6"
     jacoco
 }
 
@@ -18,14 +17,15 @@ java {
     }
 }
 
+val detektCli: Configuration by configurations.creating {
+    isVisible = false
+    isTransitive = false
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    description = "detekt CLI fat jar"
+}
+
 configurations {
-    matching { it.name.startsWith("detekt") }.configureEach {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "org.jetbrains.kotlin") {
-                useVersion("2.3.0")
-            }
-        }
-    }
     matching { it.name.startsWith("ktlint") }.configureEach {
         resolutionStrategy.eachDependency {
             if (requested.group == "org.jetbrains.kotlin") {
@@ -67,6 +67,12 @@ dependencies {
     testImplementation("io.rest-assured:rest-assured:6.0.1")
     testImplementation("org.mockito.kotlin:mockito-kotlin:6.1.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    detektCli("dev.detekt:detekt-cli:2.0.0-alpha.6") {
+        artifact {
+            classifier = "all"
+        }
+    }
 }
 
 dependencyManagement {
@@ -87,16 +93,20 @@ allOpen {
     annotation("jakarta.persistence.Embeddable")
 }
 
-detekt {
-    toolVersion = "2.0.0-alpha.2"
-    buildUponDefaultConfig = true
-    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-    baseline = file("$rootDir/config/detekt/baseline.xml")
-    ignoreFailures = false
-}
-
-tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
-    source(fileTree("$rootDir/src/main/kotlin"), fileTree("$rootDir/src/test/kotlin"))
+// Run detekt via JavaExec so --input is passed as separate directory arguments,
+// avoiding the FileTree.asPath colon-join bug in the dev.detekt 2.x alpha Gradle plugin.
+tasks.register<JavaExec>("detekt") {
+    group = "verification"
+    description = "Run detekt static analysis"
+    classpath = detektCli
+    mainClass.set("dev.detekt.cli.Main")
+    args(
+        "--input", "$rootDir/src/main/kotlin",
+        "--input", "$rootDir/src/test/kotlin",
+        "--config", "$rootDir/config/detekt/detekt.yml",
+        "--baseline", "$rootDir/config/detekt/baseline.xml",
+        "--build-upon-default-config",
+    )
 }
 
 tasks.withType<Test> {
