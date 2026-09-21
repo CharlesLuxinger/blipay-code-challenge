@@ -1,10 +1,16 @@
 package com.blipay.credit_scoring.infra.api
 
 import com.blipay.credit_scoring.infra.error.GlobalExceptionHandler
+import com.blipay.credit_scoring.domain.credit.entity.ScoreRecord
+import com.blipay.credit_scoring.domain.credit.entity.StoredAnalysis
+import com.blipay.credit_scoring.domain.credit.exception.VersionConflictException
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import java.math.BigDecimal
+import java.time.Instant
 
 class UpdateCreditAnalysisIntegrationTest : CreditAnalysisIntegrationSupport() {
     @Test
@@ -64,6 +70,32 @@ class UpdateCreditAnalysisIntegrationTest : CreditAnalysisIntegrationSupport() {
 
     @Test
     fun optimisticLockConflictReturns409() {
+        create()
+        val stale =
+            persistence.findByDocument(
+                com.blipay.credit_scoring.domain.credit.entity.DocumentNumber
+                    .of("12345678909"),
+            )!!
+        jdbcTemplate.update("UPDATE users SET version = version + 1 WHERE document_number = '12345678909'")
+        val score =
+            ScoreRecord(
+                0,
+                stale.documentNumber,
+                stale.name,
+                stale.age,
+                stale.monthlyIncome,
+                stale.city,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                0,
+                false,
+                Instant.now(),
+            )
+        assertFailsWith<VersionConflictException> {
+            persistence.update(StoredAnalysis(stale, score))
+        }
         assertEquals(409, GlobalExceptionHandler().conflict().status)
     }
 

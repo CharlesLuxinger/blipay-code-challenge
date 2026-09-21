@@ -5,6 +5,7 @@ import io.restassured.RestAssured.given
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class CreateCreditAnalysisIntegrationTest : CreditAnalysisIntegrationSupport() {
     @Test
@@ -47,13 +48,14 @@ class CreateCreditAnalysisIntegrationTest : CreditAnalysisIntegrationSupport() {
     @Test
     fun exhaustedWeatherFailureReturns502() {
         weatherStub.status = 500
-        given()
-            .contentType(ContentType.JSON)
-            .body(validCreateBody())
-            .post("/credit-analyses")
-            .then()
-            .statusCode(502)
-            .body("detail", containsString("weather"))
+        val response =
+            given()
+                .contentType(ContentType.JSON)
+                .body(validCreateBody())
+                .post("/credit-analyses")
+        response.then().statusCode(502).body("detail", containsString("weather"))
+        assertFalse(response.asString().contains("test-key"))
+        assertFalse(response.asString().contains("provider failure"))
         assertEquals(4, weatherStub.calls)
         assertEquals(0, users.count())
         assertEquals(0, scores.count())

@@ -2,6 +2,7 @@ package com.blipay.credit_scoring.infra.api
 
 import com.blipay.credit_scoring.infra.persistence.repository.ScoreJpaRepository
 import com.blipay.credit_scoring.infra.persistence.repository.UserJpaRepository
+import com.blipay.credit_scoring.infra.persistence.adapter.CustomerPersistenceAdapter
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -54,6 +56,12 @@ abstract class CreditAnalysisIntegrationSupport {
 
     @Autowired
     protected lateinit var scores: ScoreJpaRepository
+
+    @Autowired
+    protected lateinit var jdbcTemplate: JdbcTemplate
+
+    @Autowired
+    protected lateinit var persistence: CustomerPersistenceAdapter
 
     protected val weatherStub: WeatherStub
         get() = Companion.weather

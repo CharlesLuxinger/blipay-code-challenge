@@ -29,6 +29,7 @@ class ListCreditAnalysesIntegrationTest : CreditAnalysisIntegrationSupport() {
             .put("/credit-analyses/12345678909")
             .then()
             .statusCode(201)
+        jdbcTemplate.update("UPDATE scores SET created_at = TIMESTAMPTZ '2026-09-20T12:00:00Z'")
         val ids =
             given()
                 .get("/credit-analyses/12345678909?size=100")

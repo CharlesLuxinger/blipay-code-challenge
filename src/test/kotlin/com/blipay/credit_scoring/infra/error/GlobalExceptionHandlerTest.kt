@@ -34,6 +34,8 @@ class GlobalExceptionHandlerTest {
         assertEquals(400, problem.status)
         assertEquals("Request validation failed", problem.detail)
         assertEquals(2, (problem.properties!!["errors"] as List<*>).size)
+        val fields = (problem.properties!!["errors"] as List<Map<String, String>>).map { it["field"] }
+        assertEquals(setOf("name", "age"), fields.toSet())
     }
 
     @Test

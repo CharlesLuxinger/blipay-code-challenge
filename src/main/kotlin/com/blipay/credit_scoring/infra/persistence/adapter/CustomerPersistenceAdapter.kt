@@ -46,6 +46,7 @@ class CustomerPersistenceAdapter(
             val user =
                 users.findByDocumentNumber(analysis.customer.documentNumber.value)
                     ?: missingCustomer()
+            if (user.version != analysis.customer.version) versionConflict()
             user.name = analysis.customer.name.value
             user.age = analysis.customer.age.value
             user.monthlyIncome = analysis.customer.monthlyIncome.value
